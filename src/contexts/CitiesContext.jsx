@@ -1,9 +1,9 @@
 import {
   createContext,
-  useEffect,
-  useContext,
-  useReducer,
   useCallback,
+  useContext,
+  useEffect,
+  useReducer,
 } from "react";
 
 const CitiesContext = createContext();
@@ -88,25 +88,31 @@ function CitiesProvider({ children }) {
     fetchCities();
   }, []);
 
-  const getCity = useCallback(async function getCity(id) {
-    dispatch({ type: "loading" });
+  const getCity = useCallback(
+    async function getCity(id) {
+      if (Number(id) === currentCity.id) return;
 
-    try {
-      const res = await fetch(
-        `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities.json`
-      );
+      dispatch({ type: "loading" });
+      try {
+        const res = await fetch(
+          `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities.json`
+        );
 
-      const data = await res.json();
-      const filtered = await Object.values(data).find((city) => city.id === id);
+        const data = await res.json();
+        const filtered = await Object.values(data).find(
+          (city) => city.id === id
+        );
 
-      dispatch({ type: "city/loaded", payload: filtered });
-    } catch {
-      dispatch({
-        type: "rejected",
-        payload: "There was an error loading the city...",
-      });
-    }
-  }, []);
+        dispatch({ type: "city/loaded", payload: filtered });
+      } catch {
+        dispatch({
+          type: "rejected",
+          payload: "There was an error loading the city...",
+        });
+      }
+    },
+    [currentCity.id]
+  );
 
   async function createCity(newCity) {
     dispatch({ type: "loading" });
