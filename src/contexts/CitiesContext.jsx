@@ -1,9 +1,9 @@
 import {
   createContext,
-  useEffect,
-  useContext,
-  useReducer,
   useCallback,
+  useContext,
+  useEffect,
+  useReducer,
 } from "react";
 
 const CitiesContext = createContext();
@@ -20,7 +20,6 @@ function reducer(state, action) {
   switch (action.type) {
     case "loading":
       return { ...state, isLoading: true };
-
     case "cities/loaded":
       return {
         ...state,
@@ -28,10 +27,8 @@ function reducer(state, action) {
         cities: Object.values(action.payload),
         citiesData: action.payload,
       };
-
     case "city/loaded":
       return { ...state, isLoading: false, currentCity: action.payload };
-
     case "city/created":
       return {
         ...state,
@@ -39,7 +36,6 @@ function reducer(state, action) {
         cities: [...state.cities, action.payload],
         currentCity: action.payload,
       };
-
     case "city/deleted":
       return {
         ...state,
@@ -47,14 +43,12 @@ function reducer(state, action) {
         cities: state.cities.filter((city) => city.id !== action.payload),
         currentCity: {},
       };
-
     case "rejected":
       return {
         ...state,
         isLoading: false,
         error: action.payload,
       };
-
     default:
       throw new Error("Unknown action type");
   }
@@ -64,7 +58,7 @@ function CitiesProvider({ children }) {
   const [{ cities, isLoading, currentCity, error, citiesData }, dispatch] =
     useReducer(reducer, initialState);
 
-  useEffect(function () {
+  useEffect(() => {
     async function fetchCities() {
       dispatch({ type: "loading" });
 
@@ -72,13 +66,9 @@ function CitiesProvider({ children }) {
         const res = await fetch(
           `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities.json`
         );
-
         const data = await res.json();
-
-        if (data.length === 0) return;
-
         dispatch({ type: "cities/loaded", payload: data });
-      } catch {
+      } catch (error) {
         dispatch({
           type: "rejected",
           payload: "There was an error loading cities...",
@@ -88,31 +78,33 @@ function CitiesProvider({ children }) {
     fetchCities();
   }, []);
 
-  const getCity = useCallback(async function getCity(id) {
-    dispatch({ type: "loading" });
+  const getCity = useCallback(
+    async (id) => {
+      if (Number(id) === currentCity.id) return;
 
-    try {
-      const res = await fetch(
-        `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities.json`
-      );
+      dispatch({ type: "loading" });
 
-      const data = await res.json();
-      const filtered = await Object.values(data).find((city) => city.id === id);
-
-      dispatch({ type: "city/loaded", payload: filtered });
-    } catch {
-      dispatch({
-        type: "rejected",
-        payload: "There was an error loading the city...",
-      });
-    }
-  }, []);
+      try {
+        const res = await fetch(
+          `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities/${id}.json`
+        );
+        const data = await res.json();
+        dispatch({ type: "city/loaded", payload: data });
+      } catch (error) {
+        dispatch({
+          type: "rejected",
+          payload: "There was an error getting city",
+        });
+      }
+    },
+    [currentCity.id]
+  );
 
   async function createCity(newCity) {
     dispatch({ type: "loading" });
 
     try {
-      await fetch(
+      const res = await fetch(
         `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities/${newCity.id}.json`,
         {
           method: "PUT",
@@ -123,11 +115,15 @@ function CitiesProvider({ children }) {
         }
       );
 
+      if (!res.ok) {
+        throw new Error("Network response was not ok");
+      }
+
       dispatch({ type: "city/created", payload: newCity });
-    } catch {
+    } catch (error) {
       dispatch({
         type: "rejected",
-        payload: "There was an error creating the city...",
+        payload: "There was an error creating the city",
       });
     }
   }
@@ -136,18 +132,22 @@ function CitiesProvider({ children }) {
     dispatch({ type: "loading" });
 
     try {
-      await fetch(
+      const res = await fetch(
         `https://worldwise-4b8aa-default-rtdb.firebaseio.com/cities/${id}.json`,
         {
           method: "DELETE",
         }
       );
 
+      if (!res.ok) {
+        throw new Error("Network response was not ok");
+      }
+
       dispatch({ type: "city/deleted", payload: id });
-    } catch {
+    } catch (error) {
       dispatch({
         type: "rejected",
-        payload: "There was an error deleting the city...",
+        payload: "There was an error deleting the city",
       });
     }
   }

@@ -35,40 +35,52 @@ function Form() {
 
   const BASE_URL = "https://api.bigdatacloud.net/data/reverse-geocode-client";
 
-  useEffect(
-    function () {
-      if (!lat && !lng) return;
-      async function fetchCityData() {
-        try {
-          setIsLoadingGeocoding(true);
-          setGeocodingError("");
-          const res = await fetch(
-            `${BASE_URL}?latitude=${lat}&longitude=${lng}`
-          );
-          const data = await res.json();
+  useEffect(() => {
+    if (!lat && !lng) return;
 
-          if (!data.countryCode)
-            throw new Error(
-              "That doesn't seem to be a city. Click somewhere else 😉"
-            );
-
-          setCityName(data.city || data.locality || "");
-          setCountry(data.countryName);
-          setEmoji(convertToEmoji(data.countryCode));
-        } catch (error) {
-          setGeocodingError(error.message);
-        } finally {
-          setIsLoadingGeocoding(false);
+    async function fetchCityData() {
+      try {
+        setIsLoadingGeocoding(true);
+        setGeocodingError("");
+        const res = await fetch(
+          `${BASE_URL}?latitude=${lat}&longitude=${lng}`,
+          {
+            method: "GET",
+            mode: "cors", // Ensure CORS mode is set to 'cors'
+            headers: {
+              "Content-Type": "application/json",
+              // Add any other headers if needed
+            },
+          }
+        );
+        if (!res.ok) {
+          throw new Error("Network response was not ok");
         }
+        const data = await res.json();
+
+        if (!data.countryCode) {
+          throw new Error(
+            "That doesn't seem to be a city. Click somewhere else 😉"
+          );
+        }
+
+        setCityName(data.city || data.locality || "");
+        setCountry(data.countryName);
+        setEmoji(convertToEmoji(data.countryCode));
+      } catch (error) {
+        setGeocodingError(error.message);
+      } finally {
+        setIsLoadingGeocoding(false);
       }
-      fetchCityData();
-    },
-    [lat, lng]
-  );
+    }
+
+    fetchCityData();
+  }, [lat, lng]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!cityName && !date) return;
+
     const newCity = {
       cityName,
       country,
@@ -78,8 +90,14 @@ function Form() {
       id: crypto.randomUUID().toString(),
       position: { lat, lng },
     };
-    await createCity(newCity);
-    navigate("/app/cities");
+
+    try {
+      await createCity(newCity);
+      navigate("/app/cities");
+    } catch (error) {
+      console.error("Error creating city:", error);
+      // Handle error state or display a message to the user
+    }
   }
 
   if (isLoadingGeocoding) return <Spinner />;
